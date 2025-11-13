@@ -1,30 +1,28 @@
-# Use official OpenJDK 17 image (lightweight)
-FROM openjdk:17-jdk-slim AS build
-
-# Set working directory
+# ===============================
+# BUILD STAGE
+# ===============================
+FROM eclipse-temurin:17-jdk AS builder
 WORKDIR /app
 
-# Copy Maven wrapper (if available) and pom.xml first for dependency caching
-COPY pom.xml ./
-COPY mvnw ./
+# Copy Maven Wrapper and main pom.xml
+COPY mvnw .
 COPY .mvn .mvn
+COPY pom.xml .
 
-# Download dependencies (cache layer)
-RUN ./mvnw dependency:go-offline -B || apt-get update && apt-get install -y maven && mvn dependency:go-offline -B
+# Download all dependencies (helps with caching)
+RUN ./mvnw dependency:go-offline
 
-# Copy the entire project
-COPY . .
+# Copy source and build the JAR
+COPY src src
+RUN ./mvnw -DskipTests clean package
 
-# Build the Spring Boot application
-RUN ./mvnw clean package -DskipTests || mvn clean package -DskipTests
-
-
-
-# ===========================
-# Run Stage
-# ===========================
+# ===============================
+# RUN STAGE
+# ===============================
 FROM eclipse-temurin:17-jdk
 WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
+
+COPY --from=builder /app/target/*.jar app.jar
+
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
