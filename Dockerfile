@@ -18,19 +18,13 @@ COPY . .
 # Build the Spring Boot application
 RUN ./mvnw clean package -DskipTests || mvn clean package -DskipTests
 
-# ===============================
-# Final lightweight runtime image
-# ===============================
-FROM openjdk:17-jdk-slim
 
-# Set working directory
+
+# ===========================
+# Run Stage
+# ===========================
+FROM eclipse-temurin:17-jdk
 WORKDIR /app
-
-# Copy only the JAR from build stage
 COPY --from=build /app/target/*.jar app.jar
-
-# Expose port 8080
 EXPOSE 8080
-
-# Start the Spring Boot application
 ENTRYPOINT ["java", "-jar", "app.jar"]
